@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4f46e5">
+<title>月の収支</title>
+<style>
+  :root{
+    --bg:#f4f5fb;
+    --card:#ffffff;
+    --ink:#1f2430;
+    --sub:#7b8294;
+    --line:#eceef5;
+    --indigo:#4f46e5;
+    --indigo-soft:#eef0fe;
+    --green:#10b981;
+    --green-soft:#e7f7f1;
+    --red:#ef4444;
+    --red-soft:#fdebec;
+    --amber:#f59e0b;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(20,24,40,.04),0 6px 18px rgba(20,24,40,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+    overflow-x:hidden;
+    padding-bottom:84px;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 14px;}
+
+  /* ===== Header ===== */
+  .hd{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(135deg,#5b54ea,#4f46e5);
+    color:#fff;padding:14px 0 12px;
+    box-shadow:0 4px 16px rgba(79,70,229,.25);
+  }
+  .hd .wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .mon-nav{display:flex;align-items:center;gap:6px;}
+  .mon-btn{
+    width:34px;height:34px;border:none;border-radius:10px;
+    background:rgba(255,255,255,.18);color:#fff;font-size:18px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .mon-btn:active{background:rgba(255,255,255,.32);}
+  .mon-label{font-size:17px;font-weight:700;min-width:118px;text-align:center;letter-spacing:.3px;}
+  .net-pill{
+    text-align:right;line-height:1.15;
+  }
+  .net-pill .t{font-size:10px;opacity:.85;}
+  .net-pill .v{font-size:16px;font-weight:800;white-space:nowrap;}
+
+  /* ===== Tabs ===== */
+  .tabs{
+    position:sticky;top:64px;z-index:25;background:var(--bg);
+    padding:10px 0 6px;
+  }
+  .tabs .wrap{display:flex;gap:6px;overflow:hidden;}
+  .tab{
+    flex:1;border:none;background:var(--card);color:var(--sub);
+    padding:9px 2px;border-radius:11px;font-size:12px;font-weight:600;
+    cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;
+    transition:.15s;
+  }
+  .tab.on{background:var(--indigo);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3);}
+
+  /* ===== Sections ===== */
+  section{display:none;padding-top:6px;}
+  section.on{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin:8px 2px 10px;}
+  .sec-title{font-size:16px;font-weight:800;}
+  .sec-note{font-size:11px;color:var(--sub);margin:2px 2px 12px;line-height:1.45;}
+
+  .card{
+    background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:14px;margin-bottom:12px;
+  }
+
+  /* day rows (income1) */
+  .day{
+    background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+    margin-bottom:8px;overflow:hidden;
+  }
+  .day-hd{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 14px;cursor:pointer;gap:8px;
+  }
+  .day-date{display:flex;align-items:center;gap:9px;min-width:0;}
+  .day-num{font-weight:800;font-size:15px;}
+  .day-num.sat{color:#2563eb;}
+  .day-num.sun{color:#dc2626;}
+  .day-dow{font-size:12px;color:var(--sub);}
+  .day-sum{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .day-amt{font-size:13px;font-weight:700;color:var(--indigo);white-space:nowrap;}
+  .day-amt.empty{color:#c4c8d4;font-weight:600;}
+  .chev{color:#c4c8d4;font-size:13px;transition:.2s;}
+  .day.open .chev{transform:rotate(90deg);}
+  .day-body{display:none;padding:2px 14px 14px;border-top:1px solid var(--line);}
+  .day.open .day-body{display:block;}
+  .in-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:9px 0;border-bottom:1px dashed var(--line);gap:10px;
+  }
+  .in-row:last-child{border-bottom:none;}
+  .in-lbl{font-size:13px;font-weight:600;min-width:0;}
+  .in-lbl small{display:block;font-size:10px;color:var(--sub);font-weight:500;}
+  .in-field{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+  .in-field .unit{font-size:12px;color:var(--sub);}
+  input.num{
+    width:74px;text-align:right;border:1.5px solid var(--line);border-radius:9px;
+    padding:7px 9px;font-size:15px;font-family:inherit;background:#fbfbfe;color:var(--ink);
+  }
+  input.num:focus{outline:none;border-color:var(--indigo);background:#fff;}
+  input.txt{
+    flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;
+    padding:9px 11px;font-size:15px;font-family:inherit;background:#fbfbfe;color:var(--ink);
+  }
+  input.txt:focus{outline:none;border-color:var(--indigo);background:#fff;}
+
+  /* totals per category */
+  .totals{margin-top:4px;}
+  .tot-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .tot-row:last-child{border-bottom:none;}
+  .tot-l{display:flex;flex-direction:column;min-width:0;}
+  .tot-name{font-size:13px;font-weight:600;}
+  .tot-meta{font-size:10.5px;color:var(--sub);}
+  .tot-v{font-size:15px;font-weight:800;white-space:nowrap;}
+
+  /* manual list items */
+  .item{
+    display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);
+  }
+  .item:last-child{border-bottom:none;}
+  .item .txt{flex:1;}
+  .item .amt-wrap{display:flex;align-items:center;gap:3px;flex-shrink:0;}
+  .item .amt-wrap .yen{font-size:13px;color:var(--sub);}
+  .item input.amt{
+    width:96px;text-align:right;border:1.5px solid var(--line);border-radius:9px;
+    padding:9px 10px;font-size:15px;font-family:inherit;background:#fbfbfe;color:var(--ink);
+  }
+  .item input.amt:focus{outline:none;border-color:var(--indigo);background:#fff;}
+  .del{
+    width:30px;height:30px;flex-shrink:0;border:none;background:var(--red-soft);color:var(--red);
+    border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .del:active{background:#fbd5d8;}
+  .add{
+    width:100%;border:1.5px dashed #cdd2e3;background:transparent;color:var(--indigo);
+    padding:11px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;
+  }
+  .add:active{background:var(--indigo-soft);}
+  .empty-hint{text-align:center;color:#b9bdcc;font-size:13px;padding:14px 0;}
+
+  .sub-amt{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid var(--line);}
+  .sub-amt .l{font-size:13px;font-weight:700;color:var(--sub);}
+  .sub-amt .v{font-size:18px;font-weight:800;}
+
+  /* ===== Summary ===== */
+  .sum-hero{
+    background:linear-gradient(135deg,#4f46e5,#6d63f0);color:#fff;
+    border-radius:var(--radius);padding:20px 18px;margin-bottom:14px;text-align:center;
+    box-shadow:0 8px 22px rgba(79,70,229,.28);
+  }
+  .sum-hero .lbl{font-size:12px;opacity:.85;}
+  .sum-hero .big{font-size:34px;font-weight:800;margin-top:4px;letter-spacing:.5px;white-space:nowrap;}
+  .sum-hero .split{display:flex;gap:10px;margin-top:16px;}
+  .sum-hero .half{flex:1;background:rgba(255,255,255,.14);border-radius:12px;padding:10px;}
+  .sum-hero .half .h{font-size:11px;opacity:.85;}
+  .sum-hero .half .n{font-size:17px;font-weight:800;margin-top:2px;white-space:nowrap;}
+
+  .brk-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 14px;margin-bottom:12px;}
+  .brk-group-t{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.4px;padding:14px 0 4px;text-transform:uppercase;}
+  .brk{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);}
+  .brk:last-child{border-bottom:none;}
+  .brk .l{font-size:13.5px;display:flex;flex-direction:column;min-width:0;}
+  .brk .l small{font-size:10.5px;color:var(--sub);}
+  .brk .v{font-size:15px;font-weight:700;white-space:nowrap;}
+  .brk .v.pos{color:var(--green);}
+  .brk .v.neg{color:var(--red);}
+
+  .info-strip{
+    background:var(--indigo-soft);border-radius:12px;padding:12px 14px;margin-bottom:12px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .info-strip .l{font-size:11.5px;color:#5147c9;line-height:1.4;}
+  .info-strip .v{font-size:16px;font-weight:800;color:var(--indigo);white-space:nowrap;}
+
+  .adj{padding:16px 14px;}
+  .adj-t{font-size:14px;font-weight:800;margin-bottom:4px;}
+  .adj-note{font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:12px;}
+  .adj-row{display:flex;align-items:center;gap:8px;}
+  .adj-sign{
+    width:48px;height:44px;flex-shrink:0;border:none;border-radius:11px;font-size:20px;font-weight:800;
+    cursor:pointer;font-family:inherit;background:var(--green-soft);color:#0a8f63;
+  }
+  .adj-sign.neg{background:var(--red-soft);color:var(--red);}
+  .adj-field{flex:1;display:flex;align-items:center;gap:4px;border:1.5px solid var(--line);border-radius:11px;padding:0 12px;background:#fbfbfe;}
+  .adj-field:focus-within{border-color:var(--indigo);background:#fff;}
+  .adj-field .yen{font-size:15px;color:var(--sub);}
+  .adj-amt{flex:1;min-width:0;border:none;background:transparent;padding:11px 0;font-size:16px;font-family:inherit;color:var(--ink);text-align:right;}
+  .adj-amt:focus{outline:none;}
+  .adj-memo{
+    width:100%;margin-top:10px;border:1.5px solid var(--line);border-radius:11px;
+    padding:10px 12px;font-size:14px;font-family:inherit;background:#fbfbfe;color:var(--ink);
+  }
+  .adj-memo:focus{outline:none;border-color:var(--indigo);background:#fff;}
+  .backup{padding:16px 14px;}
+  .backup-t{font-size:14px;font-weight:800;margin-bottom:4px;}
+  .backup-note{font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:12px;}
+  .backup-btns{display:flex;gap:8px;}
+  .bk-btn{flex:1;border:none;border-radius:11px;padding:11px 4px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .bk-btn.save{background:var(--green-soft);color:#0a8f63;}
+  .bk-btn.save:active{background:#d6f2e7;}
+  .bk-btn.load{background:var(--indigo-soft);color:var(--indigo);}
+  .bk-btn.load:active{background:#e2e5fd;}
+  .backup-msg{font-size:12px;font-weight:600;text-align:center;margin-top:10px;min-height:16px;}
+  .backup-msg.ok{color:var(--green);}
+  .backup-msg.err{color:var(--red);}
+  .footnote{font-size:10.5px;color:var(--sub);text-align:center;padding:6px 8px 20px;line-height:1.5;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+</style>
+</head>
+<body>
+<header class="hd">
+  <div class="wrap">
+    <div class="mon-nav">
+      <button class="mon-btn" id="prevM">‹</button>
+      <div class="mon-label" id="monLabel">2026年6月</div>
+      <button class="mon-btn" id="nextM">›</button>
+    </div>
+    <div class="net-pill">
+      <div class="t">今月の総計</div>
+      <div class="v" id="hdNet">¥0</div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <button class="tab on" data-t="s1">収入①</button>
+    <button class="tab" data-t="s2">収入②</button>
+    <button class="tab" data-t="s3">支出①</button>
+    <button class="tab" data-t="s4">支出②</button>
+    <button class="tab" data-t="s5">総計</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ===== 収入① ===== -->
+  <section id="s1" class="on">
+    <div class="sec-head"><div class="sec-title">収入①(勤務)</div></div>
+    <div class="sec-note">各日の勤務時間(分)とグリーン車の使用回数を入力。月末に項目別合計を15分刻み(四捨五入)で時給計算し、一の位を四捨五入します。この月の収入は<b>翌月の収入</b>として計上されます。</div>
+
+    <div class="card totals" id="i1totals"></div>
+
+    <div class="sec-head" style="margin-top:18px;"><div class="sec-title" style="font-size:14px;">日別入力</div></div>
+    <div id="dayList"></div>
+  </section>
+
+  <!-- ===== 収入② ===== -->
+  <section id="s2">
+    <div class="sec-head"><div class="sec-title">収入②(その他)</div></div>
+    <div class="sec-note">項目と金額を手動入力。合計は<b>その月の収入</b>として計上されます。</div>
+    <div class="card">
+      <div id="inc2list"></div>
+      <button class="add" data-add="inc2">＋ 項目を追加</button>
+      <div class="sub-amt"><span class="l">収入②合計</span><span class="v pos" id="inc2sum">¥0</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 支出① ===== -->
+  <section id="s3">
+    <div class="sec-head"><div class="sec-title">支出①</div></div>
+    <div class="sec-note">項目と金額を手動入力。</div>
+    <div class="card">
+      <div id="exp1list"></div>
+      <button class="add" data-add="exp1">＋ 項目を追加</button>
+      <div class="sub-amt"><span class="l">支出①合計</span><span class="v neg" id="exp1sum">¥0</span></div>
+    </div>
+  </section>
+
+  <!-- ===== サブスク ===== -->
+  <section id="s4">
+    <div class="sec-head"><div class="sec-title">支出②(サブスク)</div></div>
+    <div class="sec-note">月額の固定費を登録。毎月この金額が支出として計上されます。</div>
+    <div class="card">
+      <div id="exp2list"></div>
+      <button class="add" data-add="exp2">＋ サブスクを追加</button>
+      <div class="sub-amt"><span class="l">サブスク合計</span><span class="v neg" id="exp2sum">¥0</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 総計 ===== -->
+  <section id="s5">
+    <div class="sec-head"><div class="sec-title">月の総計</div></div>
+    <div class="sum-hero">
+      <div class="lbl" id="heroMon">2026年6月の収支</div>
+      <div class="big" id="heroNet">¥0</div>
+      <div class="split">
+        <div class="half"><div class="h">総収入</div><div class="n" id="heroIn">¥0</div></div>
+        <div class="half"><div class="h">総支出</div><div class="n" id="heroOut">¥0</div></div>
+      </div>
+    </div>
+
+    <div class="info-strip">
+      <div class="l">今月の勤務分(収入①)<br>翌月に入金予定</div>
+      <div class="v" id="nextMonthInc">¥0</div>
+    </div>
+
+    <div class="brk-card" id="brkCard"></div>
+
+    <div class="card adj">
+      <div class="adj-t">誤差・調整</div>
+      <div class="adj-note">計算結果と実際の金額にズレがあるとき、その差額を入力すると総計に反映されます。プラスは収入として加算、マイナスは支出として減算されます。</div>
+      <div class="adj-row">
+        <button class="adj-sign" id="adjSign" data-neg="0">＋</button>
+        <div class="adj-field"><span class="yen">¥</span>
+          <input class="adj-amt" id="adjInput" type="number" inputmode="numeric" min="0" value="" placeholder="0"></div>
+      </div>
+      <input class="adj-memo" id="adjMemo" type="text" placeholder="メモ(任意)">
+    </div>
+
+    <div class="card backup">
+      <div class="backup-t">データのバックアップ</div>
+      <div class="backup-note">全月分のデータをファイルに保存できます。機種変更・URL変更の前に保存し、新しい環境で「復元」すれば元に戻せます。</div>
+      <div class="backup-btns">
+        <button class="bk-btn save" id="btnExport">⬇ バックアップを保存</button>
+        <button class="bk-btn load" id="btnImport">⬆ バックアップから復元</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <div class="backup-msg" id="backupMsg"></div>
+    </div>
+
+    <div class="footnote">
+      データはこの端末のブラウザ(このURL)に保存されます。<br>
+      収入①は前月の勤務分が当月の収入に含まれます。グリーン車代は収入(翌月)と支出(当月)の双方に計上されます。
+    </div>
+  </section>
+
+</main>
+
+<script>
+"use strict";
+
+/* ===== 設定 ===== */
+const RATES = {
+  kobetsu: {name:"育英館(個別)",  rate:1450},
+  shudan:  {name:"育英館(集団)",  rate:1850},
+  inlight: {name:"Inlight",        rate:1200}
+};
+const GREEN_FARE = 750; // 円/回
+const STORE_KEY = "kakeibo_v1";
+
+/* ===== 状態 ===== */
+let DB = load();
+let cur = ymNow();
+
+function ymNow(){const d=new Date();return {y:d.getFullYear(), m:d.getMonth()+1};}
+function ymKey(o){return o.y+"-"+String(o.m).padStart(2,"0");}
+function load(){try{return JSON.parse(localStorage.getItem(STORE_KEY))||{};}catch(e){return {};}}
+function save(){localStorage.setItem(STORE_KEY, JSON.stringify(DB));}
+
+function blankMonth(){
+  return { days:{}, inc2:[], exp1:[], exp2:[], adjust:0, adjustMemo:"" };
+}
+function monthData(key){
+  if(!DB[key]) DB[key]=blankMonth();
+  // migrate missing fields
+  const d=DB[key];
+  if(!d.days)d.days={}; if(!d.inc2)d.inc2=[]; if(!d.exp1)d.exp1=[]; if(!d.exp2)d.exp2=[];
+  if(d.adjust==null)d.adjust=0; if(d.adjustMemo==null)d.adjustMemo="";
+  return d;
+}
+function prevKey(o){let y=o.y,m=o.m-1; if(m<1){m=12;y--;} return ymKey({y,m});}
+
+/* ===== ユーティリティ ===== */
+const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+const round = n => Math.round(n);
+const DOW = ["日","月","火","水","木","金","土"];
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+
+/* 15分刻み(四捨五入) → 時給計算 → 一の位四捨五入 */
+function wageFor(minutes, rate){
+  const q = Math.round(minutes/15)*15;      // 15分刻みに四捨五入
+  const w = q/60 * rate;                      // 時給換算
+  return Math.round(w);                        // 一の位を四捨五入(整数円)
+}
+
+/* 収入①合計(その月の勤務分) */
+function income1(key){
+  const d = DB[key]; if(!d) return {cats:{}, green:0, greenCount:0, total:0};
+  const sum = {kobetsu:0, shudan:0, inlight:0, green:0};
+  for(const k in d.days){const e=d.days[k];
+    sum.kobetsu+=e.kobetsu||0; sum.shudan+=e.shudan||0; sum.inlight+=e.inlight||0; sum.green+=e.green||0;
+  }
+  const cats={};
+  let total=0;
+  for(const c in RATES){const amt=wageFor(sum[c], RATES[c].rate); cats[c]={min:sum[c], amt}; total+=amt;}
+  const greenAmt = (sum.green||0)*GREEN_FARE;
+  total += greenAmt;
+  return {cats, green:greenAmt, greenCount:sum.green||0, total};
+}
+function sumList(arr){return (arr||[]).reduce((a,x)=>a+(Number(x.amount)||0),0);}
+
+/* ===== 描画 ===== */
+function fmtMon(o){return o.y+"年"+o.m+"月";}
+
+function render(){
+  const key=ymKey(cur);
+  monthData(key);
+  document.getElementById("monLabel").textContent=fmtMon(cur);
+  document.getElementById("heroMon").textContent=fmtMon(cur)+"の収支";
+  renderIncome1(key);
+  renderDays(key);
+  renderList("inc2", key);
+  renderList("exp1", key);
+  renderList("exp2", key);
+  renderSummary(key);
+}
+
+function renderIncome1(key){
+  const r=income1(key);
+  const box=document.getElementById("i1totals");
+  let h="";
+  for(const c in RATES){
+    const cat=r.cats[c];
+    const q=Math.round(cat.min/15)*15;
+    h+=`<div class="tot-row"><div class="tot-l">
+        <span class="tot-name">${RATES[c].name}</span>
+        <span class="tot-meta">${cat.min}分 → ${q}分 × ¥${RATES[c].rate}/時</span>
+      </div><span class="tot-v">${yen(cat.amt)}</span></div>`;
+  }
+  h+=`<div class="tot-row"><div class="tot-l">
+      <span class="tot-name">経費(グリーン車代)</span>
+      <span class="tot-meta">${r.greenCount}回 × ¥${GREEN_FARE}</span>
+    </div><span class="tot-v">${yen(r.green)}</span></div>`;
+  h+=`<div class="tot-row"><div class="tot-l">
+      <span class="tot-name" style="font-weight:800">収入①合計(翌月計上)</span>
+    </div><span class="tot-v" style="color:var(--indigo)">${yen(r.total)}</span></div>`;
+  box.innerHTML=h;
+}
+
+function renderDays(key){
+  const d=DB[key];
+  const n=daysInMonth(cur.y,cur.m);
+  const list=document.getElementById("dayList");
+  let h="";
+  for(let i=1;i<=n;i++){
+    const dk=String(i).padStart(2,"0");
+    const e=d.days[dk]||{};
+    const dow=new Date(cur.y,cur.m-1,i).getDay();
+    const has=(e.kobetsu||e.shudan||e.inlight||e.green);
+    let dayAmt=0;
+    if(has){
+      dayAmt += wageFor(e.kobetsu||0,RATES.kobetsu.rate);
+      dayAmt += wageFor(e.shudan||0,RATES.shudan.rate);
+      dayAmt += wageFor(e.inlight||0,RATES.inlight.rate);
+      dayAmt += (e.green||0)*GREEN_FARE;
+    }
+    const cls=dow===0?"sun":dow===6?"sat":"";
+    const sumTxt = has ? `<span class="day-amt">${yen(dayAmt)}</span>` : `<span class="day-amt empty">未入力</span>`;
+    h+=`<div class="day" data-d="${dk}">
+      <div class="day-hd">
+        <div class="day-date"><span class="day-num ${cls}">${i}</span><span class="day-dow">${DOW[dow]}</span></div>
+        <div class="day-sum">${sumTxt}<span class="chev">›</span></div>
+      </div>
+      <div class="day-body">
+        ${fieldRow(dk,"kobetsu","育英館(個別)","¥1450/時",e.kobetsu)}
+        ${fieldRow(dk,"shudan","育英館(集団)","¥1850/時",e.shudan)}
+        ${fieldRow(dk,"inlight","Inlight","¥1200/時",e.inlight)}
+        ${fieldRow(dk,"green","グリーン車","¥750/回",e.green,"回")}
+      </div>
+    </div>`;
+  }
+  list.innerHTML=h;
+}
+function fieldRow(dk,field,label,sub,val,unit){
+  unit=unit||"分";
+  return `<div class="in-row">
+    <div class="in-lbl">${label}<small>${sub}</small></div>
+    <div class="in-field">
+      <input class="num" type="number" inputmode="numeric" min="0" data-d="${dk}" data-f="${field}" value="${val?val:""}" placeholder="0">
+      <span class="unit">${unit}</span>
+    </div></div>`;
+}
+
+function renderList(kind, key){
+  const d=DB[key];
+  const arr=d[kind];
+  const box=document.getElementById((kind==="inc2"?"inc2":kind==="exp1"?"exp1":"exp2")+"list");
+  if(!arr.length){
+    box.innerHTML=`<div class="empty-hint">項目がありません。下のボタンから追加</div>`;
+  }else{
+    let h="";
+    const ph = kind==="exp2" ? "サブスク名" : "項目名";
+    arr.forEach((x,idx)=>{
+      h+=`<div class="item">
+        <input class="txt" data-k="${kind}" data-i="${idx}" data-fld="label" value="${escAttr(x.label||"")}" placeholder="${ph}">
+        <div class="amt-wrap"><span class="yen">¥</span>
+          <input class="amt" type="number" inputmode="numeric" min="0" data-k="${kind}" data-i="${idx}" data-fld="amount" value="${x.amount!==""&&x.amount!=null?x.amount:""}" placeholder="0"></div>
+        <button class="del" data-del="${kind}" data-i="${idx}">×</button>
+      </div>`;
+    });
+    box.innerHTML=h;
+  }
+  const sumId = kind==="inc2"?"inc2sum":kind==="exp1"?"exp1sum":"exp2sum";
+  document.getElementById(sumId).textContent=yen(sumList(arr));
+}
+function escAttr(s){return String(s).replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+
+function renderSummary(key){
+  const d=DB[key];
+  const pkey=prevKey(cur);
+  const inc1Prev=income1(pkey);          // 前月勤務分 → 当月の収入
+  const inc1This=income1(key);           // 当月勤務分 → 翌月入金
+  const inc2=sumList(d.inc2);
+  const exp1=sumList(d.exp1);
+  const exp2=sumList(d.exp2);
+  const greenExpThis = inc1This.green;   // 当月のグリーン車代(支出)
+
+  const adjust = Number(d.adjust)||0;
+  const totalIn  = inc1Prev.total + inc2 + (adjust>0?adjust:0);
+  const totalOut = exp1 + exp2 + greenExpThis + (adjust<0?-adjust:0);
+  const net = totalIn - totalOut;
+
+  document.getElementById("hdNet").textContent=yen(net);
+  document.getElementById("hdNet").style.color = net<0 ? "#ffd1d1" : "#fff";
+  document.getElementById("heroNet").textContent=yen(net);
+  document.getElementById("heroIn").textContent=yen(totalIn);
+  document.getElementById("heroOut").textContent=yen(totalOut);
+  document.getElementById("nextMonthInc").textContent=yen(inc1This.total);
+
+  const pm = prevMonLabel();
+  let h=`<div class="brk-group-t">収入</div>`;
+  h+=brkRow(`収入①(${pm}の勤務分)`,"前月の給与・経費が今月入金", inc1Prev.total, "pos");
+  h+=brkRow("収入②(今月)","手動入力の合計", inc2, "pos");
+  h+=`<div class="brk-group-t">支出</div>`;
+  h+=brkRow("支出①(今月)","手動入力の合計", exp1, "neg");
+  h+=brkRow("サブスク","月額固定費の合計", exp2, "neg");
+  h+=brkRow("経費(グリーン車代)",`今月の使用分 ${inc1This.greenCount}回`, greenExpThis, "neg");
+  if(adjust!==0){
+    h+=`<div class="brk-group-t">調整</div>`;
+    h+=brkRow("誤差・調整", d.adjustMemo||"手動調整", Math.abs(adjust), adjust>=0?"pos":"neg");
+  }
+  document.getElementById("brkCard").innerHTML=h;
+
+  // 調整入力欄に現在値を反映(フォーカス中は触らない)
+  const adjInput=document.getElementById("adjInput");
+  const adjSign=document.getElementById("adjSign");
+  const adjMemo=document.getElementById("adjMemo");
+  if(document.activeElement!==adjInput){
+    adjInput.value = adjust===0 ? "" : String(Math.abs(adjust));
+  }
+  if(document.activeElement!==adjMemo){ adjMemo.value = d.adjustMemo||""; }
+  const neg = adjust<0;
+  adjSign.dataset.neg = neg?"1":"0";
+  adjSign.textContent = neg?"−":"＋";
+  adjSign.classList.toggle("neg", neg);
+}
+function commitAdjust(){
+  const key=ymKey(cur); const d=monthData(key);
+  const neg = document.getElementById("adjSign").dataset.neg==="1";
+  const raw = Math.abs(parseInt(document.getElementById("adjInput").value||"0",10)||0);
+  d.adjust = neg ? -raw : raw;
+  d.adjustMemo = document.getElementById("adjMemo").value;
+  save(); renderSummary(key);
+}
+function prevMonLabel(){let m=cur.m-1,y=cur.y;if(m<1){m=12;y--;}return m+"月";}
+function brkRow(name,sub,val,cls){
+  const sign=cls==="neg"?"−":"+";
+  return `<div class="brk"><div class="l">${name}<small>${sub}</small></div>
+    <div class="v ${cls}">${sign}${yen(val).replace("¥","¥")}</div></div>`;
+}
+
+/* ===== イベント ===== */
+document.getElementById("prevM").onclick=()=>{let m=cur.m-1,y=cur.y;if(m<1){m=12;y--;}cur={y,m};render();};
+document.getElementById("nextM").onclick=()=>{let m=cur.m+1,y=cur.y;if(m>12){m=1;y++;}cur={y,m};render();};
+
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+    document.querySelectorAll("section").forEach(x=>x.classList.remove("on"));
+    t.classList.add("on");
+    document.getElementById(t.dataset.t).classList.add("on");
+    window.scrollTo({top:0,behavior:"instant"});
+  };
+});
+
+// 日別カードの開閉 + 入力
+document.getElementById("dayList").addEventListener("click",e=>{
+  const hd=e.target.closest(".day-hd");
+  if(hd && !e.target.classList.contains("num")){
+    hd.parentElement.classList.toggle("open");
+  }
+});
+document.getElementById("dayList").addEventListener("input",e=>{
+  const inp=e.target.closest(".num"); if(!inp)return;
+  const key=ymKey(cur); const d=monthData(key);
+  const dk=inp.dataset.d, f=inp.dataset.f;
+  if(!d.days[dk])d.days[dk]={};
+  d.days[dk][f]=Math.max(0, parseInt(inp.value||"0",10)||0);
+  save();
+  renderIncome1(key);
+  // 当日の合計だけ更新
+  const e2=d.days[dk];
+  const has=(e2.kobetsu||e2.shudan||e2.inlight||e2.green);
+  let amt=0;
+  amt+=wageFor(e2.kobetsu||0,RATES.kobetsu.rate);
+  amt+=wageFor(e2.shudan||0,RATES.shudan.rate);
+  amt+=wageFor(e2.inlight||0,RATES.inlight.rate);
+  amt+=(e2.green||0)*GREEN_FARE;
+  const card=inp.closest(".day"); const amtEl=card.querySelector(".day-amt");
+  if(has){amtEl.classList.remove("empty");amtEl.textContent=yen(amt);}
+  else{amtEl.classList.add("empty");amtEl.textContent="未入力";}
+  updateHeader();
+});
+
+// 追加ボタン
+document.querySelectorAll("[data-add]").forEach(b=>{
+  b.onclick=()=>{
+    const kind=b.dataset.add; const key=ymKey(cur); const d=monthData(key);
+    d[kind].push({label:
