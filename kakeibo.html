@@ -360,12 +360,12 @@
 
     <div class="card sync" id="fsCard">
       <div class="sync-t">端末の実ファイルへ自動保存</div>
-      <div class="sync-note">対応ブラウザ(PC/AndroidのChrome・Edgeなど)では、端末上の実ファイルを1つ選ぶだけで、以降は入力するたびに自動でそのファイルへ保存されます。コードの入力は不要です。ブラウザのデータを消してもファイル自体は端末に残ります。</div>
+      <div class="sync-note">対応ブラウザ(PC/AndroidのChrome・Edgeなど)では、端末上の実ファイルを1つ選ぶだけで、以降は入力するたびに自動でそのファイルへ保存されます。コードの入力は不要です。ブラウザのデータを消してもファイル自体は端末に残ります。<br><br><b>復元したいとき:</b> 下のボタンで、以前自動保存していたのと<b>同じファイル</b>を選んでください。中身を読み込んで復元するか確認が出ます。新しいファイル名を選べば、そこから新規に自動保存が始まります。</div>
       <div class="fs-unsupported" id="fsUnsupported" style="display:none;font-size:11.5px;color:var(--sub);background:var(--indigo-soft);padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.5;">
         このブラウザ(主にiPhoneのSafari・Firefox)では、この機能に対応していません。
       </div>
       <div class="sync-actions" style="margin-top:0;">
-        <button class="sync-mini" id="fsPickBtn" style="flex:2;">保存先ファイルを選択</button>
+        <button class="sync-mini" id="fsPickBtn" style="flex:2;">ファイルを選ぶ(新規/復元)</button>
         <button class="sync-mini" id="fsResumeBtn" style="display:none;">許可して再開</button>
         <button class="sync-mini" id="fsDisconnectBtn">解除</button>
       </div>
@@ -1013,6 +1013,7 @@ async function fsPickFile(){
         DB=existing;
         save();
         render();
+        fsSetStatus("復元しました。自動保存を再開します…","ok");
       }
     }
 
