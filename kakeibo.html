@@ -360,14 +360,17 @@
 
     <div class="card sync" id="fsCard">
       <div class="sync-t">端末の実ファイルへ自動保存</div>
-      <div class="sync-note">対応ブラウザ(PC/AndroidのChrome・Edgeなど)では、端末上の実ファイルを1つ選ぶだけで、以降は入力するたびに自動でそのファイルへ保存されます。コードの入力は不要です。ブラウザのデータを消してもファイル自体は端末に残ります。<br><br><b>復元したいとき:</b> 下のボタンで、以前自動保存していたのと<b>同じファイル</b>を選んでください。中身を読み込んで復元するか確認が出ます。新しいファイル名を選べば、そこから新規に自動保存が始まります。</div>
+      <div class="sync-note">対応ブラウザ(PC/AndroidのChrome・Edgeなど)では、端末上の実ファイルへ自動保存できます。「自動保存を設定」で保存先のファイルを選ぶと、以降は入力するたびに自動でそのファイルへ保存されます。コードの入力は不要です。<br><br><b>復元したいとき</b>は「ファイルから復元」を押し、以前保存していたファイルを選んでください。</div>
       <div class="fs-unsupported" id="fsUnsupported" style="display:none;font-size:11.5px;color:var(--sub);background:var(--indigo-soft);padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.5;">
         このブラウザ(主にiPhoneのSafari・Firefox)では、この機能に対応していません。
       </div>
       <div class="sync-actions" style="margin-top:0;">
-        <button class="sync-mini" id="fsPickBtn" style="flex:2;">ファイルを選ぶ(新規/復元)</button>
+        <button class="sync-mini" id="fsPickBtn">自動保存を設定</button>
+        <button class="sync-mini" id="fsRestoreBtn">ファイルから復元</button>
+      </div>
+      <div class="sync-actions">
         <button class="sync-mini" id="fsResumeBtn" style="display:none;">許可して再開</button>
-        <button class="sync-mini" id="fsDisconnectBtn">解除</button>
+        <button class="sync-mini" id="fsDisconnectBtn">自動保存を解除</button>
       </div>
       <div class="sync-status" id="fsStatus">未設定</div>
     </div>
@@ -966,6 +969,7 @@ async function fsInit(){
   if(!fsSupported){
     const u=document.getElementById("fsUnsupported"); if(u) u.style.display="block";
     const pickBtn=document.getElementById("fsPickBtn"); if(pickBtn) pickBtn.disabled=true;
+    const restoreBtn=document.getElementById("fsRestoreBtn"); if(restoreBtn) restoreBtn.disabled=true;
     fsSetStatus("このブラウザでは利用できません","");
     return;
   }
@@ -988,35 +992,13 @@ async function fsInit(){
 }
 
 async function fsPickFile(){
+  // 「自動保存を設定」: 以降の書き込み先を選ぶだけ(既存内容の読み込みは行わない)
   if(!fsSupported){ fsSetStatus("このブラウザでは利用できません",""); return; }
   try{
     const handle = await window.showSaveFilePicker({
       suggestedName: "kakeibo-data.json",
       types: [{ description:"JSON", accept:{ "application/json":[".json"] } }]
     });
-
-    // 選択したファイルに既存データが入っていないか確認
-    let existing=null;
-    try{
-      const file=await handle.getFile();
-      const text=await file.text();
-      if(text && text.trim()){
-        const obj=JSON.parse(text);
-        const data = obj && obj.data ? obj.data : obj;
-        if(data && typeof data==="object" && Object.keys(data).length) existing=data;
-      }
-    }catch(e){ /* 空ファイル・新規ファイル・読み取り不可 → 新規として扱う */ }
-
-    if(existing){
-      const useFile = window.confirm("選択したファイルには既存のデータが入っています。このファイルの内容を読み込んで復元しますか?\n(キャンセルすると、今ブラウザにあるデータでこのファイルを上書きします)");
-      if(useFile){
-        DB=existing;
-        save();
-        render();
-        fsSetStatus("復元しました。自動保存を再開します…","ok");
-      }
-    }
-
     fsHandle=handle;
     await idbSetHandle(handle);
     await fsWriteNow();
@@ -1025,6 +1007,61 @@ async function fsPickFile(){
     if(e && e.name==="AbortError") return; // ユーザーがキャンセルした場合
     console.error(e);
     fsSetStatus("設定に失敗しました","err");
+  }
+}
+
+async function fsRestoreFile(){
+  // 「ファイルから復元」: 既存ファイルを選んで、その中身を確実に読み込む
+  if(!fsSupported){ fsSetStatus("このブラウザでは利用できません",""); return; }
+  try{
+    const picked = await window.showOpenFilePicker({
+      types: [{ description:"JSON", accept:{ "application/json":[".json"] } }],
+      excludeAcceptAllOption: false,
+      multiple: false
+    });
+    const handle = picked[0];
+    const file = await handle.getFile();
+    const text = await file.text();
+    if(!text || !text.trim()){
+      fsSetStatus("選択したファイルは空でした","err");
+      return;
+    }
+    let data;
+    try{
+      const obj = JSON.parse(text);
+      data = (obj && obj.data) ? obj.data : obj;
+    }catch(e){
+      fsSetStatus("ファイルの形式を読み取れませんでした","err");
+      return;
+    }
+    if(!data || typeof data!=="object" || !Object.keys(data).length){
+      fsSetStatus("このファイルに復元できるデータが見つかりませんでした","err");
+      return;
+    }
+
+    if(!window.confirm("このファイルの内容で、今のデータを上書きして復元します。よろしいですか?")) return;
+
+    DB = data;
+    save();
+    render();
+    fsSetStatus("復元しました","ok");
+
+    const continueSaving = window.confirm("このファイルを、今後の自動保存先としても使いますか?\n(「キャンセル」を選んでも復元自体は完了しています)");
+    if(continueSaving){
+      const perm = await handle.requestPermission({mode:"readwrite"});
+      if(perm==="granted"){
+        fsHandle=handle;
+        await idbSetHandle(handle);
+        await fsWriteNow();
+        fsShowResume(false);
+      }else{
+        fsSetStatus("復元は完了しましたが、自動保存先には設定されませんでした","");
+      }
+    }
+  }catch(e){
+    if(e && e.name==="AbortError") return; // ユーザーがキャンセルした場合
+    console.error(e);
+    fsSetStatus("復元に失敗しました","err");
   }
 }
 
@@ -1077,6 +1114,7 @@ async function fsDisconnect(){
 }
 
 document.getElementById("fsPickBtn").onclick = fsPickFile;
+document.getElementById("fsRestoreBtn").onclick = fsRestoreFile;
 document.getElementById("fsResumeBtn").onclick = fsResume;
 document.getElementById("fsDisconnectBtn").onclick = ()=>{
   if(window.confirm("自動保存の設定を解除しますか?(選択していたファイル自体は削除されません)")) fsDisconnect();
