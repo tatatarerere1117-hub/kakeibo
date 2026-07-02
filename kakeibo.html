@@ -238,32 +238,9 @@
     padding:10px 12px;font-size:14px;font-family:inherit;background:#fbfbfe;color:var(--ink);
   }
   .adj-memo:focus{outline:none;border-color:var(--indigo);background:#fff;}
-  .backup{padding:16px 14px;}
-  .backup-t{font-size:14px;font-weight:800;margin-bottom:4px;}
-  .backup-note{font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:12px;}
-  .backup-btns{display:flex;gap:8px;}
-  .bk-btn{flex:1;border:none;border-radius:11px;padding:11px 4px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
-  .bk-btn.save{background:var(--green-soft);color:#0a8f63;}
-  .bk-btn.save:active{background:#d6f2e7;}
-  .bk-btn.load{background:var(--indigo-soft);color:var(--indigo);}
-  .bk-btn.load:active{background:#d9e8df;}
-  .backup-msg{font-size:12px;font-weight:600;text-align:center;margin-top:10px;min-height:16px;}
-  .backup-msg.ok{color:var(--green);}
-  .backup-msg.err{color:var(--red);}
 
   .sync-t{font-size:14px;font-weight:800;margin-bottom:4px;}
   .sync-note{font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:12px;}
-  .sync-row{display:flex;gap:8px;}
-  .sync-code-input{
-    flex:1;min-width:0;border:1.5px solid var(--line);border-radius:11px;
-    padding:10px 12px;font-size:14px;font-family:inherit;background:#fbfbfe;color:var(--ink);
-  }
-  .sync-code-input:focus{outline:none;border-color:var(--indigo);background:#fff;}
-  .sync-btn{
-    border:none;border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;
-    cursor:pointer;font-family:inherit;background:var(--indigo);color:#fff;white-space:nowrap;
-  }
-  .sync-btn:active{opacity:.85;}
   .sync-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
   .sync-mini{
     flex:1;min-width:100px;border:1.5px solid var(--line);background:transparent;color:var(--indigo);
@@ -381,30 +358,18 @@
       <input class="adj-memo" id="adjMemo" type="text" placeholder="メモ(任意)">
     </div>
 
-    <div class="card sync">
-      <div class="sync-t">クラウド同期(データ消失対策)</div>
-      <div class="sync-note">「同期コード」を設定すると、データがブラウザとは別のクラウドにも保存されます。ブラウザの履歴やサイトデータを消してしまっても、<b>同じコードを入力すれば復元</b>できます。コードは自分だけの合言葉です。必ずメモ帳など<b>ブラウザ以外の場所</b>に控えておいてください。</div>
-      <div class="sync-row">
-        <input class="sync-code-input" id="syncCodeInput" type="text" placeholder="同期コードを入力" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="sync-btn" id="syncApplyBtn">設定</button>
+    <div class="card sync" id="fsCard">
+      <div class="sync-t">端末の実ファイルへ自動保存</div>
+      <div class="sync-note">対応ブラウザ(PC/AndroidのChrome・Edgeなど)では、端末上の実ファイルを1つ選ぶだけで、以降は入力するたびに自動でそのファイルへ保存されます。コードの入力は不要です。ブラウザのデータを消してもファイル自体は端末に残ります。</div>
+      <div class="fs-unsupported" id="fsUnsupported" style="display:none;font-size:11.5px;color:var(--sub);background:var(--indigo-soft);padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.5;">
+        このブラウザ(主にiPhoneのSafari・Firefox)では、この機能に対応していません。
       </div>
-      <div class="sync-actions">
-        <button class="sync-mini" id="syncGenBtn">コードを自動生成</button>
-        <button class="sync-mini" id="syncPullBtn">クラウドから復元</button>
-        <button class="sync-mini" id="syncLinkBtn">復元用リンクをコピー</button>
+      <div class="sync-actions" style="margin-top:0;">
+        <button class="sync-mini" id="fsPickBtn" style="flex:2;">保存先ファイルを選択</button>
+        <button class="sync-mini" id="fsResumeBtn" style="display:none;">許可して再開</button>
+        <button class="sync-mini" id="fsDisconnectBtn">解除</button>
       </div>
-      <div class="sync-status" id="syncStatus">同期コード: 未設定</div>
-    </div>
-
-    <div class="card backup">
-      <div class="backup-t">データのバックアップ</div>
-      <div class="backup-note">全月分のデータをファイルに保存できます。機種変更・URL変更の前に保存し、新しい環境で「復元」すれば元に戻せます。</div>
-      <div class="backup-btns">
-        <button class="bk-btn save" id="btnExport">⬇ バックアップを保存</button>
-        <button class="bk-btn load" id="btnImport">⬆ バックアップから復元</button>
-      </div>
-      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-      <div class="backup-msg" id="backupMsg"></div>
+      <div class="sync-status" id="fsStatus">未設定</div>
     </div>
 
     <div class="footnote">
@@ -415,8 +380,6 @@
 
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 "use strict";
 
@@ -439,8 +402,7 @@ function ymKey(o){return o.y+"-"+String(o.m).padStart(2,"0");}
 function load(){try{return JSON.parse(localStorage.getItem(STORE_KEY))||{};}catch(e){return {};}}
 function save(){
   localStorage.setItem(STORE_KEY, JSON.stringify(DB));
-  touchUpdatedAt();
-  scheduleCloudPush();
+  fsScheduleWrite();
 }
 
 function blankMonth(){
@@ -947,196 +909,181 @@ document.getElementById("adjSign").addEventListener("click",()=>{
 document.getElementById("adjInput").addEventListener("input",commitAdjust);
 document.getElementById("adjMemo").addEventListener("input",commitAdjust);
 
-/* ===== バックアップ ===== */
-function bkMsg(text, ok){
-  const el=document.getElementById("backupMsg");
-  el.textContent=text; el.className="backup-msg "+(ok?"ok":"err");
-  if(text){setTimeout(()=>{if(el.textContent===text){el.textContent="";el.className="backup-msg";}},5000);}
-}
-document.getElementById("btnExport").onclick=()=>{
-  try{
-    const payload={app:"kakeibo", version:1, exportedAt:new Date().toISOString(), data:DB};
-    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);
-    const d=new Date();
-    const fname="kakeibo-backup-"+d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0")+".json";
-    const a=document.createElement("a"); a.href=url; a.download=fname;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-    bkMsg("バックアップを保存しました",true);
-  }catch(e){bkMsg("保存に失敗しました",false);}
-};
-document.getElementById("btnImport").onclick=()=>document.getElementById("importFile").click();
-document.getElementById("importFile").addEventListener("change",ev=>{
-  const file=ev.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    try{
-      const obj=JSON.parse(reader.result);
-      const data=obj && obj.data ? obj.data : obj;
-      if(!data || typeof data!=="object") throw 0;
-      if(!confirm("現在のデータを、このバックアップで上書きします。よろしいですか?")) {ev.target.value="";return;}
-      DB=data; save(); render();
-      bkMsg("バックアップから復元しました",true);
-    }catch(e){bkMsg("ファイルを読み込めませんでした",false);}
-    ev.target.value="";
-  };
-  reader.onerror=()=>{bkMsg("ファイルの読み込みに失敗しました",false);ev.target.value="";};
-  reader.readAsText(file);
-});
+/* ===== 端末の実ファイルへ自動保存(File System Access API) ===== */
+// クラウド同期とは独立した、もう一つのデータ消失対策です。
+// 対応ブラウザ(PC/AndroidのChrome・Edgeなど)でのみ使えます。
+const fsSupported = (typeof window.showSaveFilePicker === "function");
+const IDB_NAME="kakeibo_fs", IDB_STORE="handles", IDB_KEY="dataFile";
+let fsHandle = null, fsWriteTimer = null;
 
-/* ===== クラウド同期(Firebase Firestore) ===== */
-// ブラウザの履歴・データを消してもデータを守るための仕組みです。
-// 下の firebaseConfig に、Firebaseコンソールで発行された設定をそのまま貼り付けてください。
-// 未設定(初期値のまま)の間は、今まで通りこの端末のブラウザだけにデータが保存されます。
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-const SYNC_KEY = "kakeibo_sync_code";
-const SYNC_TS_KEY = "kakeibo_updated_at";
-const SYNC_COLLECTION = "kakeiboSync";
-let fbDb = null, syncEnabled = false, pushTimer = null;
-
-function initFirebase(){
-  try{
-    if(typeof firebase==="undefined" || !firebaseConfig.apiKey || firebaseConfig.apiKey==="YOUR_API_KEY"){
-      syncEnabled = false;
-      return;
-    }
-    firebase.initializeApp(firebaseConfig);
-    fbDb = firebase.firestore();
-    syncEnabled = true;
-  }catch(e){
-    console.error("Firebaseの初期化に失敗しました", e);
-    syncEnabled = false;
-  }
-}
-
-function getSyncCode(){ return localStorage.getItem(SYNC_KEY) || ""; }
-function setSyncCodeLocal(code){ localStorage.setItem(SYNC_KEY, code); }
-function getLocalUpdatedAt(){ return Number(localStorage.getItem(SYNC_TS_KEY))||0; }
-function touchUpdatedAt(){ const t=Date.now(); localStorage.setItem(SYNC_TS_KEY, String(t)); return t; }
-
-function setSyncStatus(text, cls){
-  const el=document.getElementById("syncStatus"); if(!el) return;
-  const code=getSyncCode();
-  el.textContent = code ? text : "同期コード: 未設定";
-  el.className = "sync-status" + (cls ? " "+cls : "");
-}
-
-function scheduleCloudPush(){
-  if(!syncEnabled) return;
-  const code=getSyncCode(); if(!code) return;
-  clearTimeout(pushTimer);
-  setSyncStatus("同期待機中…","busy");
-  pushTimer=setTimeout(()=>pushToCloud(code), 1200);
-}
-function pushToCloud(code){
-  if(!syncEnabled || !code) return;
-  const updatedAt = getLocalUpdatedAt() || touchUpdatedAt();
-  setSyncStatus("クラウドに保存中…","busy");
-  fbDb.collection(SYNC_COLLECTION).doc(code).set({ data:DB, updatedAt })
-    .then(()=>{
-      setSyncStatus("同期済み("+new Date(updatedAt).toLocaleTimeString("ja-JP")+")","ok");
-    })
-    .catch(err=>{
-      console.error(err);
-      setSyncStatus("同期に失敗しました(通信環境をご確認ください)","err");
-    });
-}
-function pullFromCloud(code){
-  if(!syncEnabled || !code) return Promise.resolve(false);
-  setSyncStatus("クラウドを確認中…","busy");
-  return fbDb.collection(SYNC_COLLECTION).doc(code).get().then(snap=>{
-    const localTs=getLocalUpdatedAt();
-    if(!snap.exists){
-      pushToCloud(code);
-      return false;
-    }
-    const remote=snap.data();
-    const remoteTs=Number(remote.updatedAt)||0;
-    if(remoteTs>localTs){
-      DB = remote.data || {};
-      localStorage.setItem(STORE_KEY, JSON.stringify(DB));
-      localStorage.setItem(SYNC_TS_KEY, String(remoteTs));
-      render();
-      setSyncStatus("クラウドから復元しました("+new Date(remoteTs).toLocaleTimeString("ja-JP")+")","ok");
-      return true;
-    }else if(localTs>remoteTs){
-      pushToCloud(code);
-      return false;
-    }else{
-      setSyncStatus("同期済み(最新です)","ok");
-      return false;
-    }
-  }).catch(err=>{
-    console.error(err);
-    setSyncStatus("クラウドに接続できませんでした(オフラインの可能性)","err");
-    return false;
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    if(!("indexedDB" in window)){ reject(new Error("indexedDB unsupported")); return; }
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=()=>{ req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
   });
 }
-function syncCodeFromUrl(){
-  try{
-    const u=new URL(location.href);
-    const c=u.searchParams.get("sync");
-    return c ? c.trim() : "";
-  }catch(e){ return ""; }
+async function idbSetHandle(handle){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,"readwrite");
+    tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbGetHandle(){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,"readonly");
+    const req=tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbClearHandle(){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,"readwrite");
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
 }
 
-document.getElementById("syncApplyBtn").onclick=()=>{
-  const v=document.getElementById("syncCodeInput").value.trim();
-  if(!v){ setSyncStatus("コードを入力してください","err"); return; }
-  setSyncCodeLocal(v);
-  document.getElementById("syncCodeInput").value="";
-  if(!syncEnabled){ setSyncStatus("コードを保存しました。クラウド同期は未設定です(手順書を参照)","err"); return; }
-  pullFromCloud(v);
-};
-document.getElementById("syncGenBtn").onclick=()=>{
-  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code="";
-  for(let i=0;i<12;i++) code+=chars[Math.floor(Math.random()*chars.length)];
-  code = code.match(/.{1,4}/g).join("-");
-  document.getElementById("syncCodeInput").value=code;
-  setSyncStatus("コードを生成しました。忘れずにメモしてから「設定」を押してください","");
-};
-document.getElementById("syncPullBtn").onclick=()=>{
-  const code=getSyncCode();
-  if(!code){ setSyncStatus("先に同期コードを設定してください","err"); return; }
-  if(!syncEnabled){ setSyncStatus("クラウド同期が未設定です(手順書を参照)","err"); return; }
-  pullFromCloud(code);
-};
-document.getElementById("syncLinkBtn").onclick=()=>{
-  const code=getSyncCode();
-  if(!code){ setSyncStatus("先に同期コードを設定してください","err"); return; }
-  const u=new URL(location.href);
-  u.search=""; u.searchParams.set("sync", code);
-  const link=u.toString();
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(link)
-      .then(()=>setSyncStatus("復元用リンクをコピーしました。ブックマークに保存してください","ok"))
-      .catch(()=>window.prompt("このリンクをコピーしてブックマークしてください", link));
-  }else{
-    window.prompt("このリンクをコピーしてブックマークしてください", link);
+function fsSetStatus(text, cls){
+  const el=document.getElementById("fsStatus"); if(!el) return;
+  el.textContent=text;
+  el.className="sync-status"+(cls?" "+cls:"");
+}
+function fsShowResume(show){
+  const b=document.getElementById("fsResumeBtn"); if(b) b.style.display = show ? "" : "none";
+}
+
+async function fsInit(){
+  if(!fsSupported){
+    const u=document.getElementById("fsUnsupported"); if(u) u.style.display="block";
+    const pickBtn=document.getElementById("fsPickBtn"); if(pickBtn) pickBtn.disabled=true;
+    fsSetStatus("このブラウザでは利用できません","");
+    return;
   }
+  try{
+    const h=await idbGetHandle();
+    if(!h){ fsSetStatus("未設定",""); return; }
+    fsHandle=h;
+    const perm=await h.queryPermission({mode:"readwrite"});
+    if(perm==="granted"){
+      fsSetStatus("自動保存中: "+h.name,"ok");
+      fsShowResume(false);
+    }else{
+      fsSetStatus("自動保存が一時停止中です(許可が必要)","err");
+      fsShowResume(true);
+    }
+  }catch(e){
+    console.error(e);
+    fsSetStatus("読み込みエラーが発生しました","err");
+  }
+}
+
+async function fsPickFile(){
+  if(!fsSupported){ fsSetStatus("このブラウザでは利用できません",""); return; }
+  try{
+    const handle = await window.showSaveFilePicker({
+      suggestedName: "kakeibo-data.json",
+      types: [{ description:"JSON", accept:{ "application/json":[".json"] } }]
+    });
+
+    // 選択したファイルに既存データが入っていないか確認
+    let existing=null;
+    try{
+      const file=await handle.getFile();
+      const text=await file.text();
+      if(text && text.trim()){
+        const obj=JSON.parse(text);
+        const data = obj && obj.data ? obj.data : obj;
+        if(data && typeof data==="object" && Object.keys(data).length) existing=data;
+      }
+    }catch(e){ /* 空ファイル・新規ファイル・読み取り不可 → 新規として扱う */ }
+
+    if(existing){
+      const useFile = window.confirm("選択したファイルには既存のデータが入っています。このファイルの内容を読み込んで復元しますか?\n(キャンセルすると、今ブラウザにあるデータでこのファイルを上書きします)");
+      if(useFile){
+        DB=existing;
+        save();
+        render();
+      }
+    }
+
+    fsHandle=handle;
+    await idbSetHandle(handle);
+    await fsWriteNow();
+    fsShowResume(false);
+  }catch(e){
+    if(e && e.name==="AbortError") return; // ユーザーがキャンセルした場合
+    console.error(e);
+    fsSetStatus("設定に失敗しました","err");
+  }
+}
+
+async function fsResume(){
+  if(!fsHandle){ await fsInit(); if(!fsHandle) return; }
+  try{
+    const perm=await fsHandle.requestPermission({mode:"readwrite"});
+    if(perm==="granted"){
+      fsShowResume(false);
+      await fsWriteNow();
+    }else{
+      fsSetStatus("許可されませんでした","err");
+    }
+  }catch(e){
+    console.error(e);
+    fsSetStatus("許可の取得に失敗しました","err");
+  }
+}
+
+function fsScheduleWrite(){
+  if(!fsSupported || !fsHandle) return;
+  clearTimeout(fsWriteTimer);
+  fsSetStatus("保存待機中…","busy");
+  fsWriteTimer=setTimeout(fsWriteNow, 1200);
+}
+async function fsWriteNow(){
+  if(!fsHandle) return;
+  try{
+    const perm=await fsHandle.queryPermission({mode:"readwrite"});
+    if(perm!=="granted"){
+      fsSetStatus("自動保存が一時停止中です(許可が必要)","err");
+      fsShowResume(true);
+      return;
+    }
+    const payload={app:"kakeibo", version:1, exportedAt:new Date().toISOString(), data:DB};
+    const writable=await fsHandle.createWritable();
+    await writable.write(JSON.stringify(payload,null,2));
+    await writable.close();
+    fsSetStatus("自動保存中: "+fsHandle.name+"(最終保存 "+new Date().toLocaleTimeString("ja-JP")+")","ok");
+  }catch(e){
+    console.error(e);
+    fsSetStatus("保存に失敗しました","err");
+  }
+}
+async function fsDisconnect(){
+  fsHandle=null;
+  try{ await idbClearHandle(); }catch(e){ console.error(e); }
+  fsSetStatus("未設定","");
+  fsShowResume(false);
+}
+
+document.getElementById("fsPickBtn").onclick = fsPickFile;
+document.getElementById("fsResumeBtn").onclick = fsResume;
+document.getElementById("fsDisconnectBtn").onclick = ()=>{
+  if(window.confirm("自動保存の設定を解除しますか?(選択していたファイル自体は削除されません)")) fsDisconnect();
 };
 
 /* 起動 */
-initFirebase();
 render();
-(function bootSync(){
-  const urlCode=syncCodeFromUrl();
-  if(urlCode) setSyncCodeLocal(urlCode);
-  const code=getSyncCode();
-  if(!code){ setSyncStatus("同期コード: 未設定",""); return; }
-  if(!syncEnabled){ setSyncStatus("コード設定済み・クラウド同期は未設定(手順書を参照)","err"); return; }
-  pullFromCloud(code);
-})();
+fsInit();
 </script>
 </body>
 </html>
